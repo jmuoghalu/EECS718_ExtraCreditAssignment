@@ -29,16 +29,17 @@ class Hakimi
                 ~Hakimi();
 
 
-                bool readInput(int input_choice);
-
-
                 bool runAlgorithm();
 
 
-                void sortSequence(std::vector<int>* seq_to_sort);
+                void quickSort(std::vector<int>* seq_to_sort, std::size_t low, std::size_t high);
+
+
+                int partition(std::vector<int>* seq_to_sort, std::size_t low, std::size_t high);
 
 
                 std::vector<int>* sequence;
+                std::vector<int>* original_sequence;
 
 };
 #endif

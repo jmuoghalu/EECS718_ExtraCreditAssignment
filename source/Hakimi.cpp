@@ -6,7 +6,7 @@
 */
 
 #include "Hakimi.h"
-#define PDEBUG 1 // set to 0 or 1
+#define PDEBUG 0 // set to 0 or 1
 /*
         #if PDEBUG == 1
         #endif
@@ -14,94 +14,34 @@
 Hakimi::Hakimi()
 {
         this->sequence = nullptr;
+        this->original_sequence = nullptr;
 }
 
 
 Hakimi::~Hakimi()
 {
         delete this->sequence;
+        delete this->original_sequence;
 }
 
-
-bool Hakimi::readInput(int input_choice)
-{
-        bool ret = true;
-        std::string file_name = "";
-        std::string seq_input = "";
-        bool valid_sequence = true;
-
-        delete this->sequence;
-        this->sequence = new std::vector<int>();
-
-        std::cout << "Provide the Name of the Input File: ";
-        std::cin >> file_name;
-
-        std::ifstream input_file(file_name);
-        while(input_file >> seq_input)
-        {
-                for(std::size_t i = 0; i < seq_input.length() ; i++)
-                {
-                        if(!std::isdigit(seq_input[i]))
-                        {
-                                valid_sequence = false;
-                                break;
-                        }
-                }
-                if(!valid_sequence)
-                {
-                        std::cout << "Error: All values in the file must be non-negative integers" << std::endl;
-                        delete this->sequence;
-                        this->sequence = new std::vector<int>();
-                        break;
-                }
-                else
-                {
-                        this->sequence->push_back(std::stoi(seq_input));
-                }
-        }
-
-        if(valid_sequence)
-        {
-                sortSequence(this->sequence);
-                #if (PDEBUG == 1)
-                        std::cout << "Sequence: " << this->sequence->at(0);
-                        for(std::size_t i = 1; i < this->sequence->size(); i++)
-                        {
-                                std::cout << " " << this->sequence->at(i);
-                        }
-                        std::cout << std::endl;
-                #endif
-        }
-        else
-        {
-                return false;
-        }
-
-        return ret;
-}
 
 bool Hakimi::runAlgorithm()
 {
         bool answer = true;
-
         bool end = false;
-        int current_index = 0;
+
+        #if (PDEBUG == 1)
+                int reduction_number = 1;
+        #endif
 
         while(!end)
         {
                 int first = this->sequence->at(0);
                 std::vector<int>* next_iteration = new std::vector<int>();
 
-                #if (PDEBUG == 1)
-                        std::cout << "\nSequence: " << this->sequence->at(0);
-                        for(std::size_t i = 1; i < this->sequence->size(); i++)
-                        {
-                                std::cout << " " << this->sequence->at(i);
-                        }
-                        std::cout << std::endl;
-                #endif
-
                 std::size_t i = 1;
+
+                // perform the algorithm arithmetic
                 for(; i <= (std::size_t) first; i++)
                 {
                         next_iteration->push_back((this->sequence->at(i))-1);
@@ -111,19 +51,7 @@ bool Hakimi::runAlgorithm()
                         next_iteration->push_back(this->sequence->at(j));
                 }
 
-                #if (PDEBUG == 1)
-                        std::string s = " ";
-                        for(int j = 1; j <= current_index+1; j++) { s += " "; }
-                        std::cout << "    Next: " << s << next_iteration->at(0);
-                        for(std::size_t j = 1; j < next_iteration->size(); j++)
-                        {
-                                std::cout << " " << next_iteration->at(j);
-                        }
-                        std::cout << "\n" << std::endl;
-                #endif
-
-                sortSequence(next_iteration);
-
+                quickSort(next_iteration, 0, (next_iteration->size()-1));
 
                 bool found_non_zero = false;
                 for(std::size_t k = 0; k < next_iteration->size(); k++)
@@ -138,6 +66,15 @@ bool Hakimi::runAlgorithm()
                 {
                         delete this->sequence;
                         this->sequence = next_iteration;
+                        #if (PDEBUG == 1)
+                                std::cout << "\nReduction " << reduction_number++ << ": " << this->sequence->at(0);
+                                for(std::size_t i = 1; i < this->sequence->size(); i++)
+                                {
+                                        std::cout << " " << this->sequence->at(i);
+                                }
+                                std::cout << std::endl;
+                        #endif
+
                 }
 
                 else // else, ignore the new reduction and determine if this->sequence is graphical
@@ -170,25 +107,40 @@ bool Hakimi::runAlgorithm()
         return answer;
 }
 
-// using selection sort
-void Hakimi::sortSequence(std::vector<int>* seq_to_sort)
+
+// sort the given sequence
+void Hakimi::quickSort(std::vector<int>* seq_to_sort, std::size_t low, std::size_t high)
 {
-        int largest = 0;
-        int largest_index = 0;
-        for(std::size_t i = 0; i < seq_to_sort->size()-1; i++)
+        if(low < high && low >= 0 && high < seq_to_sort->size())
         {
-                largest = seq_to_sort->at(i);
-                largest_index = i;
-                for(std::size_t j = i+1; j < seq_to_sort->size(); j++)
-                {
-                        if(seq_to_sort->at(j) > largest)
-                        {
-                                largest = seq_to_sort->at(j);
-                                largest_index = j;
-                        }
-                }
-                int temp = seq_to_sort->at(i);
-                seq_to_sort->at(i) = largest;
-                seq_to_sort->at(largest_index) = temp;
+                int pivot_index = partition(seq_to_sort, low, high);
+                #if (PDEBUG == 1)
+                        //std::cout << "\t\t\tPivot Index: " << pivot_index << std::endl;
+                #endif
+                quickSort(seq_to_sort, low, (pivot_index-1));
+                quickSort(seq_to_sort, (pivot_index+1), high);
         }
+}
+
+// quickSort helper function
+int Hakimi::partition(std::vector<int>* seq_to_sort, std::size_t low, std::size_t high)
+{
+        int pivot = seq_to_sort->at(high);
+
+        std::size_t i = low-1;
+        for(std::size_t j = low; j < high; j++)
+        {
+                if( seq_to_sort->at(j) > pivot)
+                {
+                        i++;
+                        int temp = seq_to_sort->at(i);
+                        seq_to_sort->at(i) = seq_to_sort->at(j);
+                        seq_to_sort->at(j) = temp;
+                }
+        }
+        int temp = seq_to_sort->at(i+1);
+        seq_to_sort->at(i+1) = seq_to_sort->at(high);
+        seq_to_sort->at(high) = temp;
+
+        return i+1;
 }
